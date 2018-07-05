@@ -1,29 +1,31 @@
 
+import time
 import tensorflow as tf
+from sklearn.model_selection import train_test_split, KFold
 from dogFunctions import genData, genBatch
 
 
 def inceptionBlock( X, nPath1, nPath2_1, nPath2_2, nPath3_1, nPath3_2, nPath4 ):
     """Creates an inception block."""
 
-    tf.name_scope( "inceptionBlock" ):
-        path1 = tf.layers.conv2d( X, filters = np1, kernel_size = 1, strides = 1,
-                                  padding = "SAME", activation = tf.nn.relu, name = "p1" )
+    with tf.name_scope( "inceptionBlock" ):
+        path1 = tf.layers.conv2d( X, filters = nPath1, kernel_size = 1, strides = 1,
+                                  padding = "SAME", activation = tf.nn.relu  )
 
-        in2   = tf.layers.conv2d( X,   filters = np2_1, kernel_size = 1, strides = 1,
-                              padding = "SAME", activation = tf.nn.relu, name = "p2.1" )
-        path2 = tf.layers.conv2d( in2, filters = np2_2, kernel_size = 3, strides = 1,
-                              padding = "SAME", activation = tf.nn.relu, name = "p2.2" )
+        in2   = tf.layers.conv2d( X,   filters = nPath2_1, kernel_size = 1, strides = 1,
+                              padding = "SAME", activation = tf.nn.relu  )
+        path2 = tf.layers.conv2d( in2, filters = nPath2_2, kernel_size = 3, strides = 1,
+                              padding = "SAME", activation = tf.nn.relu )
 
-        in3   = tf.layers.conv2d( X,   filters = np3_1, kernel_size = 1, strides = 1,
-                              padding = "SAME", activation = tf.nn.relu, name = "p3.1" )
-        path3 = tf.layers.conv2d( in3, filters = np3_2, kernel_size = 5, strides = 1,
-                              padding = "SAME", activation = tf.nn.relu, name = "p3.2" )
+        in3   = tf.layers.conv2d( X,   filters = nPath3_1, kernel_size = 1, strides = 1,
+                              padding = "SAME", activation = tf.nn.relu )
+        path3 = tf.layers.conv2d( in3, filters = nPath3_2, kernel_size = 5, strides = 1,
+                              padding = "SAME", activation = tf.nn.relu )
 
         in4   = tf.layers.max_pooling2d( X, pool_size = 2, strides = 1, padding = "SAME",
                                      name = "p4.1" )
-        path4 = tf.layers.conv2d( in4, filters = np4_2, kernel_size = 1, strides = 1,
-                              padding = "SAME", activation = tf.nn.relu, name = "p4.2" )
+        path4 = tf.layers.conv2d( in4, filters = nPath4, kernel_size = 1, strides = 1,
+                              padding = "SAME", activation = tf.nn.relu  )
 
         return tf.concat( [path1, path2, path3, path4], axis = 3 )
 
@@ -39,26 +41,26 @@ def dogClassifier( X, y, inceptParams1, inceptParams2,
         pool1 = tf.layers.max_pooling2d( conv1, pool_size = 2,
                                          strides = 2, name = "pool1" )
 
-        lnr1 = tf.nn.local_response_normalization( pool1, depth_radius = 2, bias = 1,
-                                                   alpha = 0.00002, beta = 0.75 )
+        #lnr1 = tf.nn.local_response_normalization( pool1, depth_radius = 2, bias = 1,
+        #                                           alpha = 0.00002, beta = 0.75 )
 
-        conv2 = tf.layers.conv2d( lnr1, filters = 32, kernel_size = 3, strides = 1,
+        conv2 = tf.layers.conv2d( pool1, filters = 32, kernel_size = 3, strides = 1,
                                   padding = "SAME", activation = tf.nn.relu,
                                   name = "conv2" )
-        lnr2 = tf.nn.local_response_normalization( conv2, depth_radius = 2, bias = 1,
-                                                   alpha = 0.00002, beta = 0.75 )
-        pool2 = tf.layers.max_pooling2d( lnr2, pool_size = 2,
+        #lnr2 = tf.nn.local_response_normalization( conv2, depth_radius = 2, bias = 1,
+        #                                           alpha = 0.00002, beta = 0.75 )
+        pool2 = tf.layers.max_pooling2d( conv2, pool_size = 2,
                                          strides = 2, name = "pool2" )
 
-        incept1 = inceptionBlock( pool2, **inceptParams1 )
-        pool3 = tf.layers.max_pooling2d( incept1, pool_size = 2,
-                                         strides = 2, name = "pool3" )
+        #incept1 = inceptionBlock( pool2, **inceptParams1 )
+        #pool3 = tf.layers.max_pooling2d( incept1, pool_size = 2,
+        #                                 strides = 2, name = "pool3" )
 
-        incept2 = inceptionBlock( pool3, **inceptParams2 )
-        pool4 = tf.layers.max_pooling2d( incept2, pool_size = 2,
-                                         strides = 2, name = "pool4" )
+        #incept2 = inceptionBlock( pool3, **inceptParams2 )
+        #pool4 = tf.layers.max_pooling2d( incept2, pool_size = 2,
+        #                                 strides = 2, name = "pool4" )
 
-        flat = tf.layers.flatten( pool4 )
+        flat = tf.layers.flatten( pool2 )
 
         logits = tf.layers.dense( flat, 120, name = "output" )
 
@@ -72,7 +74,7 @@ def dogClassifier( X, y, inceptParams1, inceptParams2,
 
     with tf.name_scope("train"):
         opt = tf.train.AdamOptimizer( learning_rate = alpha,
-                                      beta1 = b1, beta2 = b2
+                                      beta1 = b1, beta2 = b2,
                                       epsilon = epsilon )
         training = opt.minimize( loss )
         lossSummary = tf.summary.scalar("crossEntropy", loss)
@@ -85,13 +87,13 @@ def dogClassifier( X, y, inceptParams1, inceptParams2,
 
 def trainModel( trainX, trainY, valX, valY, params, saveModel = False ):
 
-    valLoadedX, valLoadedY = genData( valX, valY, size = 400 )
+    valLoadedX, valLoadedY = genData( valX, valY, size = 100 )
 
     parameters = params[ "params" ]
 
     tf.reset_default_graph()
 
-    X = tf.placeholder(tf.float32, shape = (None, 400, 400, 1), name = "X")
+    X = tf.placeholder(tf.float32, shape = (None, 100, 100, 3), name = "X")
     y = tf.placeholder(tf.int32, shape = (None), name = "y")
 
     loss, training, accuracy, lossSummary, init, saver = dogClassifier( X, y, **parameters )
@@ -108,17 +110,20 @@ def trainModel( trainX, trainY, valX, valY, params, saveModel = False ):
 
         init.run()
 
-        tls = [ loss.eval( feed_dict = { X : trainX, y : trainY } ) ]
+        #tls = [ loss.eval( feed_dict = { X : trainX, y : trainY["breed"].values } ) ]
+        tls = [ 10000 ]
         vls = [ loss.eval( feed_dict = { X : valLoadedX, y : valLoadedY } ) ]
 
         for epoch in range(nEpochs):
-            for batchX, batchY in genBatch( trainX, trainY, batchSize, imgSize = 400 ):
+            for batchX, batchY in genBatch( trainX, trainY, batchSize, imgSize = 100 ):
 
                 sess.run( training, feed_dict = { X : batchX, y : batchY } )
                 step += 1
 
                 if ( step % 50 == 0 ):
                     valLoss = loss.eval( feed_dict = { X : valLoadedX, y : valLoadedY } )
+
+                    print("Step:", step, "valLoss:", valLoss )
 
                     if ( valLoss < loVal ):
                         loVal = valLoss
@@ -127,7 +132,7 @@ def trainModel( trainX, trainY, valX, valY, params, saveModel = False ):
                             saver.save( sess, "./best/mnist-best.ckpt" )
 
             trainLoss = loss.eval( feed_dict = { X : batchX, y : batchY } )
-            valLoss   = loss.eval( feed_dict = { X : valLoadedX, y : valLoadedX } )
+            valLoss   = loss.eval( feed_dict = { X : valLoadedX, y : valLoadedY } )
 
             tls.append( trainLoss )
             vls.append( valLoss )
@@ -157,8 +162,8 @@ def crossValidation( trainX, trainY, k, params ):
     kf = KFold( n_splits = k )
 
     for indTr, indVl in kf.split( trainX, trainY ):
-        valLoss , tls, vls = trainModel( trainX[indTr], trainY[indTr],
-                                         trainX[indVl], trainY[indVl], params )
+        valLoss , tls, vls = trainModel( trainX[indTr], trainY,
+                                         trainX[indVl], trainY, params )
 
         res.append(valLoss)
 
@@ -184,7 +189,7 @@ def hyperparameterSearch( trainX, trainY, paramsList, k ):
               "Validation loss:", valLoss )
         modelID += 1
 
-    trX, valX, trY, valY = train_test_split( trainX, trainY, test_size = 5000,
+    trX, valX, trY, valY = train_test_split( trainX, trainY, test_size = 500,
                                                    random_state = 123 )
 
     loVal, trHist, valHist = trainModel( trX, trY, valX, valY, bestParams, saveModel = True )

@@ -58,15 +58,16 @@ def genBatch( files, labels, batchSize, imgSize = 200 ):
 
         #mirror flip:
         if ( np.random.rand() < 0.5 ):
-            X = it.mirrorImages( X, np.random.randint(0,2) )
+            #X = it.mirrorImages( X, np.random.randint(0,2) )
+            X = it.mirrorImages( X, 0 )
 
         #other transforms:
         if ( np.random.rand() < 0.5 ):
             imageTransformers = [ lambda x : it.scaleImages( x, np.random.uniform(0.77, 1.43) ),
                                   lambda x : it.translateImages( x, np.random.randint(0,5),
                                                                     np.random.uniform(0, 0.3) ),
-                                  lambda x : it.rotateK90Degs( x, np.random.randint(0,4) ),
-                                  lambda x : it.rotateImages( x, np.random.uniform(-np.pi, np.pi) ) ]
+                                  #lambda x : it.rotateK90Degs( x, np.random.randint(0,4) ),
+                                  lambda x : it.rotateImages( x, np.random.uniform(-np.pi/2, np.pi/2) ) ]
 
             transform = np.random.choice( imageTransformers )
             X = transform(X)

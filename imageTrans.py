@@ -183,13 +183,15 @@ def mirrorImages( images, axis ):
     mirrorGraph = tf.Graph()
 
     with mirrorGraph.as_default():
-        X = tf.placeholder( tf.float32, shape = (m, h, w, c) )
+        X = tf.placeholder( tf.float32, shape = [m, h, w, c] )
 
         if ( axis == 0 ):
-            mirrorFlip = tf.image.flip_left_right( X )
+            #mirrorFlip = tf.image.flip_left_right( X )
+            mirrorFlip = tf.map_fn( tf.image.flip_left_right, X )
 
         else:
-            mirrorFlip = tf.image.flip_up_down( X )
+            #mirrorFlip = tf.image.flip_up_down( X )
+            mirrorFlip = tf.map_fn( tf.image.flip_up_down, X )
 
         with tf.Session() as sess:
 
