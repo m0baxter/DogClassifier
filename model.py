@@ -29,40 +29,38 @@ def inceptionBlock( X, nPath1, nPath2_1, nPath2_2, nPath3_1, nPath3_2, nPath4 ):
 
         return tf.concat( [path1, path2, path3, path4], axis = 3 )
 
-def dogClassifier( X, y, inceptParams1, inceptParams2,
-                   alpha = 0.001, b1 = 0.9, b2 = 0.999, epsilon = 1e-08 ):
+def dogClassifier( X, y, alpha = 0.001, b1 = 0.9, b2 = 0.999, epsilon = 1e-08 ):
     """Creates all objects needed for training the dog classifier."""
 
-    with tf.name_scope( "encoder" ):
+    heInit = tf.variance_scaling_initializer()
 
-        conv1 = tf.layers.conv2d( X, filters = 16, kernel_size = 3, strides = 1,
-                                  padding = "SAME", activation = tf.nn.relu,
-                                  name = "conv1" )
-        pool1 = tf.layers.max_pooling2d( conv1, pool_size = 2,
-                                         strides = 2, name = "pool1" )
+    with tf.name_scope( "cnn" ):
 
-        #lnr1 = tf.nn.local_response_normalization( pool1, depth_radius = 2, bias = 1,
-        #                                           alpha = 0.00002, beta = 0.75 )
+        conv1 = tf.layers.conv2d( X, filters = 4, kernel_size = 3, strides = 1,
+                                  padding = "same", activation = tf.nn.elu,
+                                  name = "conv1", kernel_initializer = heInit )
+        pool1 = tf.layers.max_pooling2d( conv1, pool_size = 2, strides = 1, padding = "valid",
+                                         name = "pool1" )
 
-        conv2 = tf.layers.conv2d( pool1, filters = 32, kernel_size = 3, strides = 1,
-                                  padding = "SAME", activation = tf.nn.relu,
-                                  name = "conv2" )
-        #lnr2 = tf.nn.local_response_normalization( conv2, depth_radius = 2, bias = 1,
-        #                                           alpha = 0.00002, beta = 0.75 )
-        pool2 = tf.layers.max_pooling2d( conv2, pool_size = 2,
-                                         strides = 2, name = "pool2" )
+        conv2 = tf.layers.conv2d( pool1, filters = 8, kernel_size = 3, strides = 1,
+                                  padding = "same", activation = tf.nn.elu,
+                                  name = "conv2", kernel_initializer = heInit )
+        pool2 = tf.layers.max_pooling2d( conv2, pool_size = 2, strides = 1, padding = "valid",
+                                         name = "pool2" )
 
-        #incept1 = inceptionBlock( pool2, **inceptParams1 )
-        #pool3 = tf.layers.max_pooling2d( incept1, pool_size = 2,
-        #                                 strides = 2, name = "pool3" )
+        conv3 = tf.layers.conv2d( pool2, filters = 16, kernel_size = 3, strides = 1,
+                                  padding = "same", activation = tf.nn.elu,
+                                  name = "conv3", kernel_initializer = heInit )
+        pool3 = tf.layers.max_pooling2d( conv3, pool_size = 2, strides = 1, padding = "valid",
+                                         name = "pool3" )
 
-        #incept2 = inceptionBlock( pool3, **inceptParams2 )
-        #pool4 = tf.layers.max_pooling2d( incept2, pool_size = 2,
-        #                                 strides = 2, name = "pool4" )
+        conv4 = tf.layers.conv2d( pool3, filters = 2, kernel_size = 1, strides = 1,
+                                  padding = "same", activation = tf.nn.elu,
+                                  name = "conv4", kernel_initializer = heInit )
 
-        flat = tf.layers.flatten( pool2 )
+        flat = tf.layers.flatten( conv4 )
 
-        logits = tf.layers.dense( flat, 120, name = "output" )
+        logits = tf.layers.dense( flat, 120, name = "output", kernel_initializer = heInit )
 
     with tf.name_scope("loss"):
         crossEnt = tf.nn.sparse_softmax_cross_entropy_with_logits( labels = y, logits = logits)
@@ -85,15 +83,29 @@ def dogClassifier( X, y, inceptParams1, inceptParams2,
 
     return loss, training, accuracy, lossSummary, init, saver
 
+def batchEval( X, y, allX, allY, batchSize, function ):
+
+    count = 0
+    temp = 0
+
+    for start in range(0, len(allX) - 1, batchSize):
+        bX, bY = genData( allX[ start : start + batchSize ], allY, size = 200 )
+        n = len(bX)
+        count += n
+
+        temp += function.eval( feed_dict = { X : bX, y : bY } ) * n
+
+    return temp / count
+
 def trainModel( trainX, trainY, valX, valY, params, saveModel = False ):
 
-    valLoadedX, valLoadedY = genData( valX, valY, size = 100 )
+    #valLoadedX, valLoadedY = genData( valX, valY, size = 200 )
 
     parameters = params[ "params" ]
 
     tf.reset_default_graph()
 
-    X = tf.placeholder(tf.float32, shape = (None, 100, 100, 3), name = "X")
+    X = tf.placeholder(tf.float32, shape = (None, 200, 200, 3), name = "X")
     y = tf.placeholder(tf.int32, shape = (None), name = "y")
 
     loss, training, accuracy, lossSummary, init, saver = dogClassifier( X, y, **parameters )
@@ -112,16 +124,18 @@ def trainModel( trainX, trainY, valX, valY, params, saveModel = False ):
 
         #tls = [ loss.eval( feed_dict = { X : trainX, y : trainY["breed"].values } ) ]
         tls = [ 10000 ]
-        vls = [ loss.eval( feed_dict = { X : valLoadedX, y : valLoadedY } ) ]
+        #vls = [ loss.eval( feed_dict = { X : valLoadedX, y : valLoadedY } ) ]
+        vls = [ batchEval( X, y, valX, valY, batchSize, loss ) ]
 
         for epoch in range(nEpochs):
-            for batchX, batchY in genBatch( trainX, trainY, batchSize, imgSize = 100 ):
+            for batchX, batchY in genBatch( trainX, trainY, batchSize, imgSize = 200 ):
 
                 sess.run( training, feed_dict = { X : batchX, y : batchY } )
                 step += 1
 
                 if ( step % 50 == 0 ):
-                    valLoss = loss.eval( feed_dict = { X : valLoadedX, y : valLoadedY } )
+                    #valLoss = loss.eval( feed_dict = { X : valLoadedX, y : valLoadedY } )
+                    valLoss =  batchEval( X, y, valX, valY, batchSize, loss )
 
                     print("Step:", step, "valLoss:", valLoss )
 
@@ -132,7 +146,9 @@ def trainModel( trainX, trainY, valX, valY, params, saveModel = False ):
                             saver.save( sess, "./best/mnist-best.ckpt" )
 
             trainLoss = loss.eval( feed_dict = { X : batchX, y : batchY } )
-            valLoss   = loss.eval( feed_dict = { X : valLoadedX, y : valLoadedY } )
+            #trainLoss =  batchEval( batchX, batchY, batchSize, loss )
+            #valLoss   = loss.eval( feed_dict = { X : valLoadedX, y : valLoadedY } )
+            valLoss   =  batchEval( X, y, valX, valY, batchSize, loss )
 
             tls.append( trainLoss )
             vls.append( valLoss )
@@ -150,7 +166,8 @@ def trainModel( trainX, trainY, valX, valY, params, saveModel = False ):
         if (saveModel):
             print()
             print("***")
-            print("Final model validation accuracy:", accuracy.eval(feed_dict = { X : valX, y : valY }) )
+            #print("Final model validation accuracy:", accuracy.eval(feed_dict = { X : valX, y : valY }) )
+            print("Final model validation accuracy:", batchEval( X, y, valX, valY, batchSize, accuracy ) )
             print("***")
             print()
 
