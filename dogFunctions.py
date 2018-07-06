@@ -22,6 +22,38 @@ def getImageId( fileName ):
 
     return re.split('\.|/', fileName )[3]
 
+def groupBreeds( files, labels ):
+
+    breeds = [ [] for _ in range(120) ]
+
+    for f in files:
+
+        imgID = getImageId( f )
+        breedId = labels[ labels["id"] == imgID ].breed.item()
+
+        breeds[ breedId ].append( f )
+
+    return breeds
+
+def sampleBreeds( breed, dogs, N ):
+    """Returns N samples from dogs that are breed."""
+
+    return np.random.choice( dogs[breed], N )
+
+def sampleDogs( X, labels, N ):
+    """Selects N samples of each breed."""
+    
+    dogs = groupBreeds( X, labels )
+    
+    samples = np.array([], dtype = '<U44')
+    
+    for i in range(120):
+        samples = np.append( samples, sampleBreeds( i, dogs, N ) )
+        
+    np.random.shuffle(samples)
+    
+    return samples
+
 def genData( files, labels, size = 200 ):
     """Generates a set of training data and its associated labels."""
 
