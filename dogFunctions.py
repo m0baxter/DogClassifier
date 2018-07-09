@@ -38,20 +38,23 @@ def groupBreeds( files, labels ):
 def sampleBreeds( breed, dogs, N ):
     """Returns N samples from dogs that are breed."""
 
-    return np.random.choice( dogs[breed], N )
+    return np.random.choice( dogs[breed], N, replace = False)
 
-def sampleDogs( X, labels, N ):
+def sampleDogs( X, labels, valFrac ):
     """Selects N samples of each breed."""
-    
+
     dogs = groupBreeds( X, labels )
-    
+
     samples = np.array([], dtype = '<U44')
-    
+
     for i in range(120):
-        samples = np.append( samples, sampleBreeds( i, dogs, N ) )
-        
+
+        breedCount = (labels['breed'] == i).sum()
+
+        samples = np.append( samples, sampleBreeds( i, dogs, int(valFrac * breedCount) ) )
+
     np.random.shuffle(samples)
-    
+
     return samples
 
 def genData( files, labels, size = 200 ):
@@ -85,24 +88,23 @@ def genBatch( files, labels, batchSize, imgSize = 200 ):
 
         #Choose transformations
         #brightness:
-        if ( np.random.rand() < 0.5 ):
-            X = it.adjustBrightness( X, np.random.uniform(-0.3, 0.3) )
+        #if ( np.random.rand() < 0.5 ):
+        #    X = it.adjustBrightness( X, np.random.uniform(-0.15, 0.15) )
 
         #mirror flip:
         if ( np.random.rand() < 0.5 ):
-            #X = it.mirrorImages( X, np.random.randint(0,2) )
             X = it.mirrorImages( X, 0 )
 
         #other transforms:
-        if ( np.random.rand() < 0.5 ):
-            imageTransformers = [ lambda x : it.scaleImages( x, np.random.uniform(0.77, 1.43) ),
-                                  lambda x : it.translateImages( x, np.random.randint(0,5),
-                                                                    np.random.uniform(0, 0.3) ),
-                                  #lambda x : it.rotateK90Degs( x, np.random.randint(0,4) ),
-                                  lambda x : it.rotateImages( x, np.random.uniform(-np.pi/2, np.pi/2) ) ]
+        #if ( np.random.rand() < 0.5 ):
+        #    imageTransformers = [ lambda x : it.scaleImages( x, np.random.uniform(0.86, 1.18) ),
+        #                          lambda x : it.translateImages( x, np.random.randint(0,5),
+        #                                                            np.random.uniform(0, 0.15) ),
+        #                          #lambda x : it.rotateK90Degs( x, np.random.randint(0,4) ),
+        #                          lambda x : it.rotateImages( x, np.random.uniform(-np.pi/6, np.pi/6) ) ]
 
-            transform = np.random.choice( imageTransformers )
-            X = transform(X)
+        #    transform = np.random.choice( imageTransformers )
+        #    X = transform(X)
 
         yield X, y
 
