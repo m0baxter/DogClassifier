@@ -88,12 +88,8 @@ def genBatch( files, labels, batchSize, imgSize = 200 ):
 
         #Choose transformations
         #brightness:
-        #if ( np.random.rand() < 0.5 ):
-        #    X = it.adjustBrightness( X, np.random.uniform(-0.15, 0.15) )
-
-        #mirror flip:
-        if ( np.random.rand() < 0.5 ):
-            X = it.mirrorImages( X, 0 )
+        if ( np.random.rand() < 0.3 ):
+            X = it.adjustBrightness( X, np.random.uniform(-0.15, 0.15) )
 
         #other transforms:
         #if ( np.random.rand() < 0.5 ):
@@ -105,6 +101,10 @@ def genBatch( files, labels, batchSize, imgSize = 200 ):
 
         #    transform = np.random.choice( imageTransformers )
         #    X = transform(X)
+
+        #mirror flip:
+        if ( np.random.rand() < 0.5 ):
+            X = it.mirrorImages( X, 0 )
 
         yield X, y
 

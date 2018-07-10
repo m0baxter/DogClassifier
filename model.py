@@ -76,15 +76,15 @@ def dogClassifier( X, y, trn, alpha = 0.001, b1 = 0.9, b2 = 0.999, eps = 1e-08, 
 
         flat = tf.layers.flatten( incept3 )
 
-        dropout1 = tf.layers.dropout( flat, 0.0, training = trn )
+        dropout1 = tf.layers.dropout( flat, 0.5, training = trn )
 
         fc1 = tf.layers.dense( dropout1, 1024, name = "fc1", kernel_initializer = heInit,
                                activation = tf.nn.elu )
-        dropout2 = tf.layers.dropout( fc1, 0.0, training = trn )
+        dropout2 = tf.layers.dropout( fc1, 0.5, training = trn )
 
         fc2 = tf.layers.dense( dropout2, 512, name = "fc2", kernel_initializer = heInit,
                                activation = tf.nn.elu )
-        dropout3 = tf.layers.dropout( fc2, 0.0, training = trn )
+        dropout3 = tf.layers.dropout( fc2, 0.5, training = trn )
 
         logits = tf.layers.dense( dropout3, 120, name = "output", kernel_initializer = heInit )
 
