@@ -109,20 +109,20 @@ def genBatch( files, labels, batchSize, imgSize = 200, train = False ):
             
                 #Choose transformations
                 #brightness:
-                if ( np.random.rand() < 0.5 ):
+                if ( np.random.rand() < 0.3 ):
                     X = it.adjustBrightness( X, np.random.uniform(-0.15, 0.15) )
 
                 #Scale:
-                if ( np.random.rand() < 0.5 ):
+                if ( np.random.rand() < 0.3 ):
                     X = it.scaleImages( X, np.random.uniform(0.86, 1.18) )
                     
                 #Translate:
-                if ( np.random.rand() < 0.5 ):
+                if ( np.random.rand() < 0.2 ):
                     X = it.translateImages( X, np.random.randint(0,5), np.random.uniform(0, 0.15) )
 
                 #Rotate:
                 if ( np.random.rand() < 0.5 ):
-                    X = it.rotateImages( X, np.random.uniform(-np.pi, np.pi) )
+                    X = it.rotateImages( X, np.random.uniform(-np.pi/6, np.pi/6) )
 
                 #mirror flip:
                 if ( np.random.rand() < 0.5 ):
